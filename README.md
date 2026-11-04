@@ -5,6 +5,7 @@ radio that uplifts, inspires, encourages and informs.
 
 - **Web player:** https://primetimepowershow.com/mediaplayer/pprmediaplayerfull.html
 - **Android app:** `com.primetimepowershow.twa`, built from the web player with PWABuilder
+- **Privacy policy:** https://primetimepowershow.com/mediaplayer/privacy-policy.html
 
 ## What's in here
 
