@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+<title>Primetime Power Radio | Offline</title>
+<style>
+  html,body{height:100%;margin:0;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box;
+       background:radial-gradient(circle at 20% 10%,#0000cc 0%,transparent 55%),#000}
+  img{width:96px;height:96px;border-radius:22px}
+  h1{font-size:22px;margin:20px 0 8px}
+  p{color:rgba(255,255,255,.65);margin:0 0 24px}
+  button{background:#0000cc;color:#fff;border:0;border-radius:999px;padding:12px 26px;font-size:15px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+  <div>
+    <img src="icon-192.png" alt="">
+    <h1>You're offline</h1>
+    <p>Reconnect to the internet to listen live.</p>
+    <button onclick="location.reload()">Try again</button>
+  </div>
+  <script>window.addEventListener('online', () => location.reload());</script>
+</body>
+</html>

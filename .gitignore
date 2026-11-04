@@ -1,0 +1,13 @@
+# Never commit the Android signing key or its passwords
+*.keystore
+*.jks
+signing-key-info.txt
+ppr-app-signing-kit.zip
+
+# Built app files go in GitHub Releases, not the repo
+*.apk
+*.aab
+*.idsig
+
+.DS_Store
+Thumbs.db

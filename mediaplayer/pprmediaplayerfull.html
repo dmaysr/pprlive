@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Primetime Power Radio | Live Player</title>
+<link rel="icon" href="https://primetimepowerradio.com/images/pprlogositeleft.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PPR Live">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#000000;
+    --white:#ffffff;
+    --blue:#0000cc;
+    --blue-bright:#2a3bff;
+    --red:#e10600;
+    --muted:rgba(255,255,255,.62);
+    --line:rgba(255,255,255,.12);
+    --glass:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--black);color:var(--white)}
+  body{
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Full-screen stage ---------- */
+  .stage{
+    position:fixed;inset:0;
+    display:grid;grid-template-rows:auto 1fr auto;
+    padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));
+    isolation:isolate;
+  }
+  .bg{position:absolute;inset:0;z-index:-1;overflow:hidden}
+  .bg::before,.bg::after{
+    content:"";position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;
+    transition:opacity 1.2s ease;
+  }
+  .bg::before{width:70vmax;height:70vmax;left:-20vmax;top:-25vmax;background:radial-gradient(circle,var(--blue) 0%,transparent 65%)}
+  .bg::after{width:55vmax;height:55vmax;right:-18vmax;bottom:-22vmax;background:radial-gradient(circle,rgba(225,6,0,.55) 0%,transparent 65%)}
+  body.playing .bg::before{animation:drift 14s ease-in-out infinite alternate}
+  body.playing .bg::after{animation:drift 18s ease-in-out infinite alternate-reverse}
+  @keyframes drift{to{transform:translate(6vmax,5vmax) scale(1.08)}}
+  .grain{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:3px 3px;mix-blend-mode:overlay}
+
+  /* ---------- Top bar ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--white);min-width:0}
+  .brand img{height:40px;width:auto;display:block}
+  .brand span{font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .live-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:7px 12px;border-radius:999px;
+    background:rgba(225,6,0,.14);border:1px solid rgba(225,6,0,.45);
+    font-size:12px;font-weight:800;letter-spacing:.14em;
+  }
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(225,6,0,.7)}
+  body.playing .live-dot{animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(225,6,0,.7)}70%{box-shadow:0 0 0 10px rgba(225,6,0,0)}100%{box-shadow:0 0 0 0 rgba(225,6,0,0)}}
+  .icon-btn{
+    width:40px;height:40px;border-radius:12px;border:1px solid var(--line);
+    background:var(--glass);color:var(--white);display:grid;place-items:center;cursor:pointer;
+    transition:background .2s,border-color .2s;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25)}
+  .icon-btn svg{width:20px;height:20px}
+
+  /* ---------- Center ---------- */
+  .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:clamp(18px,3.5vh,34px);min-height:0}
+  .cover{
+    position:relative;width:min(42vh,72vw,380px);aspect-ratio:1;border-radius:28px;
+    background:#0a0a0a;border:1px solid var(--line);
+    display:grid;place-items:center;
+    box-shadow:0 30px 80px rgba(0,0,204,.35),0 0 0 1px rgba(255,255,255,.04) inset;
+    transition:transform .5s cubic-bezier(.2,.8,.2,1);
+  }
+  body.playing .cover{transform:scale(1.02)}
+  .cover img{width:78%;height:auto;object-fit:contain}
+  .cover::after{
+    content:"";position:absolute;inset:-2px;border-radius:30px;padding:2px;
+    background:conic-gradient(from 0deg,var(--blue),var(--red),var(--blue));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:0;transition:opacity .6s;
+  }
+  body.playing .cover::after{opacity:.9;animation:spin 6s linear infinite}
+  @keyframes spin{to{filter:hue-rotate(0deg)}}
+
+  .title{font-size:clamp(24px,4.2vh,40px);font-weight:800;letter-spacing:-.01em;line-height:1.1}
+  .tagline{color:var(--muted);font-size:clamp(14px,1.9vh,17px);margin-top:8px}
+  .now{
+    display:inline-flex;align-items:center;gap:10px;max-width:min(90vw,560px);
+    padding:10px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);
+    font-size:14px;color:var(--white);
+  }
+  .now .lbl{color:var(--muted);font-weight:500;flex:none}
+  .now .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+
+  /* EQ bars (decorative, play-state driven) */
+  .eq{display:flex;align-items:flex-end;gap:3px;height:14px;flex:none}
+  .eq i{display:block;width:3px;height:30%;background:var(--red);border-radius:2px}
+  body.playing .eq i{animation:eq 1s ease-in-out infinite}
+  .eq i:nth-child(2){animation-delay:-.4s!important}
+  .eq i:nth-child(3){animation-delay:-.7s!important}
+  .eq i:nth-child(4){animation-delay:-.2s!important}
+  @keyframes eq{0%,100%{height:25%}50%{height:100%}}
+
+  /* ---------- Controls ---------- */
+  .controls{display:flex;align-items:center;justify-content:center;gap:22px}
+  .play{
+    width:clamp(76px,11vh,96px);height:clamp(76px,11vh,96px);border-radius:50%;
+    border:none;cursor:pointer;color:var(--white);
+    background:linear-gradient(145deg,var(--blue-bright),var(--blue));
+    box-shadow:0 14px 40px rgba(0,0,204,.55),0 0 0 6px rgba(0,0,204,.18);
+    display:grid;place-items:center;transition:transform .15s,box-shadow .3s;
+  }
+  .play:hover{transform:scale(1.05)}
+  .play:active{transform:scale(.97)}
+  .play svg{width:42%;height:42%}
+  .play .spinner{display:none;width:40%;height:40%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .8s linear infinite}
+  body.loading .play .spinner{display:block}
+  body.loading .play svg{display:none}
+  @keyframes rot{to{transform:rotate(360deg)}}
+
+  .vol{display:flex;align-items:center;gap:10px}
+  .vol input[type=range]{
+    -webkit-appearance:none;appearance:none;width:120px;height:4px;border-radius:4px;
+    background:linear-gradient(to right,var(--white) var(--v,80%),rgba(255,255,255,.2) var(--v,80%));
+    outline:none;cursor:pointer;
+  }
+  .vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--white);border:none}
+  .vol input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--white);border:none}
+
+  .status{font-size:13px;color:var(--muted);min-height:18px}
+  .status b{color:var(--white);font-weight:700}
+
+  /* ---------- Footer ---------- */
+  .bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .socials{display:flex;gap:8px;flex-wrap:wrap}
+  .socials a{
+    color:var(--white);text-decoration:none;font-size:13px;font-weight:500;
+    padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--glass);
+    transition:background .2s,border-color .2s;
+  }
+  .socials a:hover{background:var(--blue);border-color:var(--blue)}
+  .listeners{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .listeners b{color:var(--white);font-size:15px}
+
+  /* ---------- Start overlay (needed: browsers require one tap for audio + fullscreen) ---------- */
+  .gate{
+    position:fixed;inset:0;z-index:20;display:grid;place-items:center;
+    background:rgba(0,0,0,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    transition:opacity .4s ease,visibility .4s;
+  }
+  .gate.hide{opacity:0;visibility:hidden}
+  .gate button{
+    display:flex;flex-direction:column;align-items:center;gap:18px;
+    background:none;border:none;color:var(--white);cursor:pointer;font:inherit;
+  }
+  .gate .ring{
+    width:120px;height:120px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(145deg,var(--blue-bright),var(--blue));
+    box-shadow:0 0 0 0 rgba(0,0,204,.6);animation:gatepulse 2s infinite;
+  }
+  .gate .ring svg{width:46px;height:46px;margin-left:6px}
+  @keyframes gatepulse{0%{box-shadow:0 0 0 0 rgba(42,59,255,.6)}70%{box-shadow:0 0 0 28px rgba(42,59,255,0)}100%{box-shadow:0 0 0 0 rgba(42,59,255,0)}}
+  .gate .g1{font-size:22px;font-weight:800}
+  .gate .g2{font-size:14px;color:var(--muted)}
+
+  @media (max-width:600px){
+    .brand span{display:none}
+    .vol input[type=range]{width:90px}
+    .bottom{justify-content:center}
+    .socials{justify-content:center}
+  }
+  @media (max-height:560px){
+    .cover{width:min(30vh,40vw)}
+    .tagline{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="bg"><div class="grain"></div></div>
+
+  <header class="top">
+    <a class="brand" href="https://primetimepowerradio.com" target="_blank" rel="noopener">
+      <img src="https://primetimepowerradio.com/images/pprlogositeleft.png" alt="Primetime Power Radio">
+      <span>Primetime Power Radio</span>
+    </a>
+    <div class="top-actions">
+      <div class="live-pill"><span class="live-dot"></span>LIVE</div>
+      <button class="icon-btn" id="fsBtn" title="Full screen (F)" aria-label="Toggle full screen">
+        <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="center">
+    <div class="cover">
+      <img src="https://primetimepowerradio.com/images/pprlogositeleft.png" alt="Station cover">
+    </div>
+
+    <div>
+      <h1 class="title">Primetime Power Radio</h1>
+      <p class="tagline">Radio that uplifts, inspires, encourages and informs.</p>
+    </div>
+
+    <div class="now" id="nowWrap">
+      <span class="eq"><i></i><i></i><i></i><i></i></span>
+      <span class="lbl">On air</span>
+      <span class="txt" id="nowTitle">Live Broadcast</span>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn" id="muteBtn" title="Mute (M)" aria-label="Mute">
+        <svg id="volIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+      </button>
+
+      <button class="play" id="playBtn" aria-label="Play live">
+        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+        <span class="spinner"></span>
+      </button>
+
+      <div class="vol">
+        <input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume">
+      </div>
+    </div>
+
+    <div class="status" id="status">Tap play to listen live</div>
+  </main>
+
+  <footer class="bottom">
+    <nav class="socials">
+      <a href="https://primetimepowerradio.com" target="_blank" rel="noopener">Website</a>
+      <a href="https://www.facebook.com/primetimepowerradio/" target="_blank" rel="noopener">Facebook</a>
+      <a href="https://x.com/primepowerradio" target="_blank" rel="noopener">X</a>
+      <a href="https://www.instagram.com/primetimepowerradio/" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://www.threads.com/@primetimepowerradio" target="_blank" rel="noopener">Threads</a>
+    </nav>
+    <div class="listeners" id="listenersWrap" hidden>
+      <b id="listeners">0</b> listening now
+    </div>
+  </footer>
+</div>
+
+<div class="gate" id="gate">
+  <button id="gateBtn" aria-label="Start listening live">
+    <span class="ring"><svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></span>
+    <span class="g1">Listen Live</span>
+    <span class="g2">Primetime Power Radio</span>
+  </button>
+</div>
+
+<audio id="audio" preload="none" playsinline></audio>
+
+<script>
+(() => {
+  /* ===================== CONFIG ===================== */
+  const STREAM_URL  = 'https://sonicpanel.vmakerhost.com/8033/stream';
+  const INFO_URL    = 'https://sonicpanel.vmakerhost.com/cp/get_info.php?p=8033'; // SonicPanel now-playing / listeners
+  const INFO_EVERY  = 15000;  // ms between now-playing refreshes
+  const MAX_DRIFT   = 3.0;    // seconds behind live before we snap back to real time
+  const STALL_LIMIT = 6000;   // ms of buffering before we force a fresh connection
+  const STATION     = 'Primetime Power Radio';
+  const ARTWORK     = 'https://primetimepowerradio.com/images/pprlogositeleft.png';
+  /* ================================================== */
+
+  const $ = id => document.getElementById(id);
+  const audio = $('audio'), body = document.body;
+  const playIcon = $('playIcon'), statusEl = $('status');
+
+  const ICON_PLAY = '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>';
+  const ICON_STOP = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+
+  let wantPlaying = false;   // what the listener asked for
+  let baseWall = 0, baseMedia = 0; // real-time anchor for drift detection
+  let stallTimer = null, retryTimer = null, retryDelay = 1000;
+  let ignorePauseUntil = 0;
+
+  /* ---------- Real-time connection handling ----------
+     Live audio never "resumes" from a buffer. Every Play opens a brand-new
+     connection (cache-busted), and Stop fully tears the connection down,
+     so playback always starts at the live edge. While playing, we compare
+     wall-clock time against media time; if the stream falls behind (after
+     a network hiccup), we reconnect to jump back to real time. */
+
+  function connect(reason) {
+    clearTimeout(retryTimer);
+    clearTimeout(stallTimer);
+    body.classList.add('loading');
+    setStatus(reason || 'Connecting to live stream…');
+    baseWall = 0;
+    ignorePauseUntil = performance.now() + 1500;
+    audio.src = STREAM_URL + (STREAM_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+    audio.load();
+    const p = audio.play();
+    if (p && p.catch) p.catch(err => {
+      if (err && err.name === 'NotAllowedError') { // autoplay blocked: show the gate again
+        wantPlaying = false; teardown(); showGate(); return;
+      }
+      scheduleRetry();
+    });
+  }
+
+  function teardown() {
+    clearTimeout(stallTimer);
+    clearTimeout(retryTimer);
+    ignorePauseUntil = performance.now() + 1500;
+    audio.pause();
+    audio.removeAttribute('src');   // drop the connection + discard any buffered audio
+    audio.load();
+    body.classList.remove('playing', 'loading');
+    baseWall = 0;
+  }
+
+  function start() {
+    wantPlaying = true;
+    retryDelay = 1000;
+    connect();
+    renderButton();
+  }
+
+  function stop() {
+    wantPlaying = false;
+    teardown();
+    renderButton();
+    setStatus('Stopped — press play to rejoin live');
+  }
+
+  function toggle() { wantPlaying ? stop() : start(); }
+
+  function scheduleRetry() {
+    if (!wantPlaying) return;
+    teardown();
+    body.classList.add('loading');
+    setStatus('Reconnecting…');
+    retryTimer = setTimeout(() => connect('Reconnecting to live…'), retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 10000);
+  }
+
+  audio.addEventListener('playing', () => {
+    clearTimeout(stallTimer);
+    body.classList.remove('loading');
+    body.classList.add('playing');
+    retryDelay = 1000;
+    baseWall = performance.now() / 1000;
+    baseMedia = audio.currentTime;
+    setStatus('<b>Live</b> · playing in real time');
+  });
+
+  audio.addEventListener('waiting', () => {
+    if (!wantPlaying) return;
+    body.classList.add('loading');
+    setStatus('Buffering…');
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => { if (wantPlaying) scheduleRetry(); }, STALL_LIMIT);
+  });
+  audio.addEventListener('stalled', () => {
+    if (!wantPlaying) return;
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => { if (wantPlaying) scheduleRetry(); }, STALL_LIMIT);
+  });
+  audio.addEventListener('error', () => { if (wantPlaying) scheduleRetry(); });
+  audio.addEventListener('ended', () => { if (wantPlaying) scheduleRetry(); });
+
+  // If the OS / headset / browser pauses us, treat it as a Stop so Resume is live.
+  audio.addEventListener('pause', () => {
+    if (performance.now() < ignorePauseUntil) return; // our own reconnects fire 'pause' too
+    if (wantPlaying && audio.getAttribute('src')) { stop(); }
+  });
+
+  // Drift watchdog: keep playback pinned to the live edge.
+  audio.addEventListener('timeupdate', () => {
+    if (!wantPlaying || !baseWall || audio.paused) return;
+    const wallElapsed  = performance.now() / 1000 - baseWall;
+    const mediaElapsed = audio.currentTime - baseMedia;
+    const drift = wallElapsed - mediaElapsed;
+    if (drift > MAX_DRIFT) {
+      // Try a cheap seek to the newest buffered audio first; otherwise reconnect.
+      const b = audio.buffered;
+      if (b.length && b.end(b.length - 1) - audio.currentTime > MAX_DRIFT) {
+        audio.currentTime = b.end(b.length - 1) - 0.25;
+        baseWall = performance.now() / 1000; baseMedia = audio.currentTime;
+      } else {
+        connect('Catching up to live…');
+      }
+    }
+  });
+
+  // Coming back online / to the tab: make sure we're live.
+  window.addEventListener('online', () => { if (wantPlaying) connect('Back online — rejoining live…'); });
+  window.addEventListener('offline', () => { if (wantPlaying) setStatus('Connection lost — waiting for network…'); });
+
+  /* ---------- UI ---------- */
+  function renderButton() {
+    playIcon.innerHTML = wantPlaying ? ICON_STOP : ICON_PLAY;
+    $('playBtn').setAttribute('aria-label', wantPlaying ? 'Stop' : 'Play live');
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = wantPlaying ? 'playing' : 'paused';
+  }
+  function setStatus(html) { statusEl.innerHTML = html; }
+
+  $('playBtn').addEventListener('click', toggle);
+
+  // Volume
+  const vol = $('vol');
+  let lastVol = 0.8;
+  function applyVol(v) {
+    audio.volume = v; audio.muted = v === 0;
+    vol.value = Math.round(v * 100);
+    vol.style.setProperty('--v', vol.value + '%');
+    $('volIcon').innerHTML = v === 0
+      ? '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/>'
+      : '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>' + (v > .5 ? '<path d="M19 5a10 10 0 0 1 0 14"/>' : '');
+    try { localStorage.setItem('ppr-vol', v); } catch (e) {}
+  }
+  vol.addEventListener('input', () => { const v = vol.value / 100; if (v > 0) lastVol = v; applyVol(v); });
+  $('muteBtn').addEventListener('click', () => applyVol(audio.volume > 0 && !audio.muted ? 0 : (lastVol || .8)));
+  try { const s = parseFloat(localStorage.getItem('ppr-vol')); if (!isNaN(s)) { lastVol = s || .8; applyVol(s); } else applyVol(.8); } catch (e) { applyVol(.8); }
+
+  // Full screen
+  const root = document.documentElement;
+  const fsSupported = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function enterFs() {
+    if (!fsSupported || isFs()) return;
+    const r = root.requestFullscreen ? root.requestFullscreen({ navigationUI: 'hide' }) : root.webkitRequestFullscreen();
+    if (r && r.catch) r.catch(() => {});
+  }
+  function exitFs() {
+    if (!isFs()) return;
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+  function renderFs() {
+    $('fsIcon').innerHTML = isFs()
+      ? '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>'
+      : '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>';
+  }
+  if (!fsSupported) $('fsBtn').style.display = 'none';
+  $('fsBtn').addEventListener('click', () => isFs() ? exitFs() : enterFs());
+  document.addEventListener('fullscreenchange', renderFs);
+  document.addEventListener('webkitfullscreenchange', renderFs);
+
+  // Start gate: one tap starts live audio AND enters full screen (browsers require a tap for both)
+  const gate = $('gate');
+  function showGate() { gate.classList.remove('hide'); }
+  $('gateBtn').addEventListener('click', () => {
+    gate.classList.add('hide');
+    enterFs();
+    start();
+  });
+
+  // Keyboard: Space = play/stop, M = mute, F = full screen
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' && e.key !== ' ') return;
+    if (e.code === 'Space') { e.preventDefault(); if (!gate.classList.contains('hide')) $('gateBtn').click(); else toggle(); }
+    else if (e.key === 'm' || e.key === 'M') $('muteBtn').click();
+    else if (e.key === 'f' || e.key === 'F') $('fsBtn').click();
+  });
+
+  // Lock-screen / headset controls — "pause" always behaves as a live Stop
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'Live Broadcast', artist: STATION,
+      artwork: [{ src: ARTWORK, sizes: '512x512', type: 'image/png' }]
+    });
+    try {
+      navigator.mediaSession.setActionHandler('play', start);
+      navigator.mediaSession.setActionHandler('pause', stop);
+      navigator.mediaSession.setActionHandler('stop', stop);
+    } catch (e) {}
+  }
+
+  /* ---------- Now playing + listener count (SonicPanel) ---------- */
+  async function refreshInfo() {
+    try {
+      const res = await Promise.race([
+        fetch(INFO_URL + '&_=' + Date.now(), { cache: 'no-store' }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+      ]);
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json();
+      const title = (d.title || d.songtitle || '').trim();
+      if (title) {
+        $('nowTitle').textContent = title;
+        if ('mediaSession' in navigator && navigator.mediaSession.metadata) navigator.mediaSession.metadata.title = title;
+      }
+      const n = parseInt(d.listeners ?? d.currentlisteners ?? d.uniquelisteners, 10);
+      if (!isNaN(n)) { $('listeners').textContent = n; $('listenersWrap').hidden = false; }
+    } catch (e) { /* info is optional; the stream keeps playing regardless */ }
+  }
+  refreshInfo();
+  setInterval(refreshInfo, INFO_EVERY);
+
+  // Installed app: it already runs full screen, so hide the web full-screen toggle.
+  const appMode = matchMedia('(display-mode: fullscreen), (display-mode: standalone)');
+  function renderAppMode() { if (appMode.matches) $('fsBtn').style.display = 'none'; }
+  renderAppMode();
+  if (appMode.addEventListener) appMode.addEventListener('change', renderAppMode);
+
+  // App support: offline shell + installability (the live stream itself is never cached)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+
+  // Optional: ?autoplay=1 tries to start immediately (works where the browser allows it)
+  if (new URLSearchParams(location.search).get('autoplay') === '1') {
+    gate.classList.add('hide'); start();
+  }
+})();
+</script>
+</body>
+</html>
