@@ -7,6 +7,14 @@ radio that uplifts, inspires, encourages and informs.
 - **Android app:** `com.primetimepowershow.twa`, built from the web player with PWABuilder
 - **Privacy policy:** https://primetimepowershow.com/mediaplayer/privacy-policy.html
 
+## Screenshots
+
+| Listen Live | Playing live | Ready to play |
+|:---:|:---:|:---:|
+| <img src="screenshots/01-listen-live.png" width="240" alt="PPR Live start screen with the Listen Live button"> | <img src="screenshots/02-playing-live.png" width="240" alt="PPR Live playing the broadcast in real time"> | <img src="screenshots/03-ready-to-play.png" width="240" alt="PPR Live player stopped, ready to rejoin live"> |
+
+Store images for product listings are in [`store/`](store/).
+
 ## What's in here
 
 | Path | What it is | Where it goes on the server |
